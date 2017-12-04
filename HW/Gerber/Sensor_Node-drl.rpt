@@ -1,0 +1,26 @@
+Drill report for X:/Motion_Node/HW/Sensor_Node.kicad_pcb
+Created on 12/4/2017 3:47:42 PM
+
+Copper Layer Stackup:
+    =============================================================
+    L1 :  F.Cu                      front
+    L2 :  B.Cu                      back
+
+
+Drill file 'X:Sensor_Node.drl' contains
+    plated through holes:
+    =============================================================
+    T1  0.40mm  0.016"  (160 holes)
+    T2  0.90mm  0.035"  (96 holes)
+    T3  1.00mm  0.039"  (52 holes)
+    T4  1.02mm  0.040"  (32 holes)
+
+    Total plated holes count 340
+
+
+Not plated through holes are merged with plated holes
+    unplated through holes:
+    =============================================================
+    T5  3.20mm  0.126"  (8 holes)
+
+    Total unplated holes count 8
