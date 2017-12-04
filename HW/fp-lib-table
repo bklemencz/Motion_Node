@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name Motion_Node)(type KiCad)(uri "$(KIPRJMOD)\\Motion_Node.pretty")(options "")(descr ""))
+  (lib (name Heater_Ctrl)(type KiCad)(uri X:\Heat_Ctrl\Heater_Ctrl.pretty)(options "")(descr ""))
+)

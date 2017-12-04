@@ -1,0 +1,26 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP LT8920_Mini
+D XY-WB Mini LT8920 2.4GHz Transceiver Module
+K Mini LT8920 2.4GHz Transceiver Module
+$ENDCMP
+#
+$CMP Mini360_DCDC
+D Mini360 Buck DCDC Converter 23V/2A
+K Buck DCDC Converter 23V/2A
+$ENDCMP
+#
+$CMP STM8S005K6
+D Mainstream Value line 8-bit MCU with 32 Kbytes Flash, 16 MHz CPU, integrated EEPROM LQFP-32
+K STM8S
+$ENDCMP
+#
+$CMP STM8S105K4
+D Mainstream Access line 8-bit MCU with 16 Kbytes Flash, 16 MHz CPU, integrated EEPROM LQFP-32
+$ENDCMP
+#
+$CMP STM8S105K6
+D Mainstream Access line 8-bit MCU with 32 Kbytes Flash, 16 MHz CPU, integrated EEPROM LQFP-32
+$ENDCMP
+#
+#End Doc Library
