@@ -1,5 +1,12 @@
 # For PCBs designed using KiCad: http://www.kicad-pcb.org/
 
+#C compiler
+*.ls
+*.o
+*.lkf
+*.map
+*.sm8
+
 # Temporary files
 *.000
 *.bak
