@@ -1,0 +1,19 @@
+///																			RF DATA STRUCTURE
+///// 														7			6			5			4			3			2			1			0
+////										byte1		|									NodeID												|
+////                                        byte2   |                Sequence                       |
+////										byte2 	|  MsgType  |ARQ | ARS |         Length         |
+////										byte3   |				          ItemID							          |
+///											byte4.. |								DATA x													|
+
+///											sequence: counter - increased every message
+///											ARQ: 			Sender wants an ACK message
+///											ARS:			Flags ACK message (3bytes, NODEID, Sequence of the original message, ARQ-clear, ARS-set, Msgtype - reply)
+///											msgtype: 	        00 - request,
+///																01 - reply,
+///																10 - periodical mess,
+///																11-  Alarm mess
+///											ItemID: 	Node Function ID
+///											Length:   Data bytes count + 1
+
+ mmm
