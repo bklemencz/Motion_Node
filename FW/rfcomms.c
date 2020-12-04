@@ -56,6 +56,7 @@ extern uint8_t LED_LastSaved_CW[4];
 extern uint8_t LED_LastSaved_WW[4];
 extern uint8_t 					AD_NTC_TempX5,				AD_LDR_LUXD50,				AD_AirQuality;
 extern bool RF_TX_MotionIR, RF_TX_MotionRadar;
+extern bool Shutter_Enabled[4];
 
 
 extern volatile uint32_t 	Uptime;
@@ -129,6 +130,7 @@ void RF_TX_Handle(void)
     LT8900_sendPacket(RF_TX_Buffer, PacketS);
     GPIO_WriteLow(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
     RF_TX_MotionAlarm_Sent = TRUE;
+    Serial_Send_PWM_MotionDet(255);
   }
 }
 
@@ -148,6 +150,7 @@ void RF_TX_BuildPeriodic(RF_Datagram_t *DataToSend)
 	DataToSend->Data[3] = 0;
   if (RF_TX_MotionIR) {SetBit(DataToSend->Data[3], 0);}
   if (RF_TX_MotionRadar) {SetBit(DataToSend->Data[3], 1);}
+  if (RF_TX_MotionIR || RF_TX_MotionRadar) Serial_Send_PWM_MotionDet(255);
   if (!RF_TX_MotionIR && !RF_TX_MotionRadar) RF_TX_MotionAlarm_Sent = FALSE;
 	RF_TX_MotionIR=FALSE;	RF_TX_MotionRadar=FALSE;
 }
@@ -241,11 +244,12 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
 							RF_RX_LED_GroupEnabled[i] = TRUE;
               RF_RX_LED_MotionAct[i] = FALSE;
               RF_RX_LED_NightMode[i] = FALSE;
-              LED_Target_CW[i] = LED_LastSaved_CW[i];
+              LED_Target_CW[i] = LED_LastSaved_CW[i]; 
               LED_Target_WW[i] = LED_LastSaved_WW[i];
             }
             Serial_Send_PWM_NightEN(255,0);       // All night off
-            Serial_Send_PWM_MotionEN(255,0);      // All motion off
+            //Serial_Send_PWM_MotionEN(255,0);      // All motion off
+            _delay_ms(RS485_MESSAGE_DELAY);
             Serial_Send_PWM_Onoff(255,1);         // All On
 
           } else                                  // ALL at night mode
@@ -276,7 +280,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
               //RF_RX_LED_NightMode[i] = FALSE;
               RF_RX_LED_MotionAct[i] = FALSE;
             }
-            Serial_Send_PWM_MotionEN(255,0);
+            //Serial_Send_PWM_MotionEN(255,0);
             Serial_Send_PWM_Onoff(255,0);
           } else                                  // ALL at motion mode
           {
@@ -460,13 +464,15 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
               RF_RX_LED_NightMode[3] = FALSE;
               LED_Target_CW[3] = LED_LastSaved_CW[3];
               LED_Target_WW[3] = LED_LastSaved_WW[3];
-              Serial_Send_PWM_Onoff(104,TRUE);
+              if (!Shutter_Enabled[3]) Serial_Send_PWM_Onoff(104,TRUE);
+              else Serial_Send_Shutter_Start(4);
           } else                                  // GR at night mode
           {
               RF_RX_LED_NightMode[3] = TRUE;
               RF_RX_LED_GroupEnabled[3] = TRUE;
               RF_RX_MI_FirstPress = FALSE;
-              Serial_Send_PWM_NightEN(104,TRUE);
+              if (!Shutter_Enabled[3]) Serial_Send_PWM_NightEN(104,TRUE);
+              else Serial_Send_Shutter_GoUp(4);
           } //nightmode GR
         } // GR on command
 
@@ -480,14 +486,16 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
               RF_RX_MI_FirstPress = TRUE;
             } else RF_RX_MI_FirstPress = FALSE;
               RF_RX_LED_GroupEnabled[3] = FALSE;
-              Serial_Send_PWM_Onoff(104,FALSE);
+              if (!Shutter_Enabled[3]) Serial_Send_PWM_Onoff(104,FALSE);
+              else Serial_Send_Shutter_Start(4);
             //  RF_RX_LED_NightMode[3] = FALSE;
               RF_RX_LED_MotionAct[3] = FALSE;
           } else                                  // GR at motion mode
           {
               RF_RX_LED_MotionAct[3] = TRUE;
               RF_RX_MI_FirstPress = FALSE;
-              Serial_Send_PWM_MotionEN(104,TRUE);
+              if (!Shutter_Enabled[3]) Serial_Send_PWM_MotionEN(104,TRUE);
+              else Serial_Send_Shutter_GoDown(4);
           } //GR motion
         } // GR off command
 
@@ -510,7 +518,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                   LED_Target_WW[i]++;
                   if (LED_Target_CW[i] > Conf_LED_Max_Brightness) LED_Target_CW[i] = Conf_LED_Max_Brightness;
                   if (LED_Target_WW[i] > Conf_LED_Max_Brightness) LED_Target_WW[i] = Conf_LED_Max_Brightness;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                          //group command
@@ -537,7 +545,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                   LED_Target_WW[i] += RF_MILIGHT_HOLD_STEP;
                   if (LED_Target_CW[i] > Conf_LED_Max_Brightness) LED_Target_CW[i] = Conf_LED_Max_Brightness;
                   if (LED_Target_WW[i] > Conf_LED_Max_Brightness) LED_Target_WW[i] = Conf_LED_Max_Brightness;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                        // group command
@@ -576,7 +584,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                 {
                   if (LED_Target_CW[i] > 2)   LED_Target_CW[i]--;
                   if (LED_Target_WW[i] > 2)   LED_Target_WW[i]--;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                          //group command
@@ -599,7 +607,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                 {
                   if (LED_Target_CW[i] > (2+RF_MILIGHT_HOLD_STEP))   LED_Target_CW[i] -= RF_MILIGHT_HOLD_STEP;
                   if (LED_Target_WW[i] > (2+RF_MILIGHT_HOLD_STEP))   LED_Target_WW[i] -= RF_MILIGHT_HOLD_STEP;                  
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                        // group command
@@ -632,7 +640,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                 {
                   if (LED_Target_CW[i] > 2) LED_Target_CW[i]--;
                   if (LED_Target_WW[i] < Conf_LED_Max_Brightness) LED_Target_WW[i]++;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                          //group command
@@ -656,7 +664,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                   if (LED_Target_CW[i] > (2+RF_MILIGHT_HOLD_STEP)) LED_Target_CW[i] -= RF_MILIGHT_HOLD_STEP;
                   LED_Target_WW[i] += RF_MILIGHT_HOLD_STEP;
                   if (LED_Target_WW[i] > Conf_LED_Max_Brightness) LED_Target_WW[i] = Conf_LED_Max_Brightness;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
 
                 }
               }
@@ -697,7 +705,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                   LED_Target_CW[i]++;
                   if (LED_Target_CW[i] > Conf_LED_Max_Brightness) LED_Target_CW[i] = Conf_LED_Max_Brightness;
                   if (LED_Target_WW[i] > 2) LED_Target_WW[i]--;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                          //group command
@@ -722,7 +730,7 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
                   LED_Target_CW[i] += RF_MILIGHT_HOLD_STEP;
                   if (LED_Target_CW[i] > Conf_LED_Max_Brightness) LED_Target_CW[i] = Conf_LED_Max_Brightness;
                   if (LED_Target_WW[i] > (2+RF_MILIGHT_HOLD_STEP))  LED_Target_WW[i] -= RF_MILIGHT_HOLD_STEP;
-                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]);
+                  Serial_Send_PWM_Bright((101+i),LED_Target_CW[i],LED_Target_WW[i]); _delay_ms(RS485_MESSAGE_DELAY);
                 }
               }
             } else                        // group command
@@ -774,6 +782,7 @@ void RF_RX_Command(uint8_t *RX_Buffer, int8_t Length)
 {
   uint8_t Item;
   uint8_t Size;
+  uint8_t send485[16],i;
 
     if (RX_Buffer[0] == RF_NODEID)
     {
@@ -790,6 +799,14 @@ void RF_RX_Command(uint8_t *RX_Buffer, int8_t Length)
         if ( Item == 2)
         {
           GR_CW_Set(0, RX_Buffer[4]<<24 + RX_Buffer[5]<<16 + RX_Buffer[6]<<8 + RX_Buffer[7]);
+        }
+        if (Item == 250)   // Send raw data on 485
+        {
+          for (i=0;i<Size;i++)
+          {
+            send485[i] = RX_Buffer[4+i];
+          }
+          Serial_Send_Raw(Size,send485,RS485_CHAR_DELAY);
         }
     }
 }

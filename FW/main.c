@@ -93,6 +93,10 @@ uint8_t LED_LastSaved_WW[4];
 uint8_t LED_Act_CW[4];
 uint8_t LED_Act_WW[4];
 
+//shutter control definitions
+uint8_t Shutter_Config;
+bool Shutter_Enabled[4];
+
 // converted brightness level to send
 uint8_t WS2811_1_Stream[WS2811_MAX_CHANNELS];
 uint8_t WS2811_2_Stream[WS2811_MAX_CHANNELS];
@@ -192,7 +196,7 @@ void EE_Store_Config (void)
 	Save_Targets();				// 36 - 43 LED TARGETS
 	if ( RF_RX_MI_ValidAddress !=0 ) EEPROM_Program2Byte(47, RF_RX_MI_ValidAddress);
 	EEPROM_ProgramByte(49, RF_GetNodeID());
-
+	EEPROM_ProgramByte(50,Shutter_Config);
 
 
 }
@@ -208,12 +212,12 @@ void EE_Read_Config(void)
 	RF_SetNodeID(EEPROM_ReadByte(49));
 
 	LEDGroup_Def_CW[0] = EEPROM_Read4Byte(7);
-  LEDGroup_Def_CW[1] = EEPROM_Read4Byte(11);
-  LEDGroup_Def_CW[2] = EEPROM_Read4Byte(15);
+  	LEDGroup_Def_CW[1] = EEPROM_Read4Byte(11);
+  	LEDGroup_Def_CW[2] = EEPROM_Read4Byte(15);
 	LEDGroup_Def_CW[3] = EEPROM_Read4Byte(19);
 
 	LEDGroup_Def_WW[0] = EEPROM_Read4Byte(23);
-  LEDGroup_Def_WW[1] = EEPROM_Read4Byte(27);
+  	LEDGroup_Def_WW[1] = EEPROM_Read4Byte(27);
 	LEDGroup_Def_WW[2] = EEPROM_Read4Byte(31);
 	LEDGroup_Def_WW[3] = EEPROM_Read4Byte(35);
 
@@ -228,6 +232,13 @@ void EE_Read_Config(void)
 	LED_LastSaved_WW[3] = EEPROM_ReadByte(46);
 
 	RF_RX_MI_ValidAddress = EEPROM_Read2Byte(47);
+
+	Shutter_Config = EEPROM_ReadByte(50);
+	if (bitRead(Shutter_Config,0) != 0)	Shutter_Enabled[0] = TRUE;
+	if (bitRead(Shutter_Config,1) != 0)	Shutter_Enabled[1] = TRUE;
+	if (bitRead(Shutter_Config,2) != 0)	Shutter_Enabled[2] = TRUE;
+	if (bitRead(Shutter_Config,3) != 0)	Shutter_Enabled[3] = TRUE;
+	
 	//For Remote Control Command, when holding remote key it sends command without hold first.
 	SetBit(Main_Config, MAINCONFIG_FADEDELEN);
 	SetBit(Main_Config, MAINCONFIG_RFPERTXEN);
@@ -406,7 +417,7 @@ void LED_ChekMotion(void)
 			if (RF_RX_LED_MotionAct[i]){ RF_RX_LED_GroupEnabled[i] = TRUE;																// turn on groups with motion control activated
 			LED_MotionReq[i] = TRUE;		}																																// set flag that group is on by motion detect
 		}
-		Serial_Send_PWM_MotionDet(255);
+		
 	}
 	if (Uptime >= LastMotion_Uptime) TimeFromLastMotion = Uptime - LastMotion_Uptime;								// Normal Time Calculation
 	else if (Uptime < LastMotion_Uptime) TimeFromLastMotion = U32_MAX - LastMotion_Uptime + Uptime;	// If Uptime Overflowed

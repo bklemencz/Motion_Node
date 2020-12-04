@@ -18,3 +18,7 @@ Dependencies=
 [Project3]
 Filename=stm8s003.stp
 Dependencies=
+[Options]
+ActiveProject=stm8s105
+ActiveConfig=Debug
+AddSortedElements=0

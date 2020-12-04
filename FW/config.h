@@ -29,7 +29,7 @@
 #define LIGHTS_BY_MOTION        1
 #define START_LEDON             1
 #define LIGHTS_OFF_DELAY_S      10
-#define LIGHT_MAX_PERCENT       100
+#define LIGHT_MAX_PERCENT       99
 #define LIGHT_NIGHT_PERCENT     10
 #define RF_MI_LEARN_WINDOW_MS   60000
 #define LED_FADE_ENABLED        1
@@ -45,13 +45,15 @@
 #define AD_AVG_COUNT            10
 #define AD_MAX_LOOKUP_SIZE      21
 
-#define HAS_PIR                 0
+#define HAS_PIR                 1
 #define HAS_RADAR               1
 #define PIR_DELAY_MS            380
 #define RADAR_DELAY_MS          380
 
 #define USE_485_COM             1
 #define RS485_BAUD              57600
+#define RS485_CHAR_DELAY        1
+#define RS485_MESSAGE_DELAY     60
 
 #define MAINSTATE_IDLE          0
 #define MAINSTATE_AD            1

@@ -57,7 +57,7 @@ void LT8900_InitRegisters(void) {
     LT8900_writeRegister(38, 0x0000);
     LT8900_writeRegister(39, 0x55AA);
 
-  LT8900_writeRegister(40, 0x4402);  //max allowed error bits = 0 (01 = 0 error bits)
+  LT8900_writeRegister(40, 0x4403);  //max allowed error bits = 0 (01 = 0 error bits)
   LT8900_writeRegister(41, 0xB000);
  // writeRegister(R_PACKETCONFIG,PACKETCONFIG_CRC_ON | PACKETCONFIG_PACK_LEN_ENABLE | PACKETCONFIG_FW_TERM_TX);
 
@@ -65,7 +65,7 @@ void LT8900_InitRegisters(void) {
   LT8900_writeRegister(43, 0x000f);
 	#ifdef _USE_LT8920
 	LT8900_writeRegister(44,0x0100);		//set datarate to 1M
-	LT8900_writeRegister(45,0x0152);		//Option: 0x0152 or 0x0080 for 1M, 0x0552 for 250k,125k and 62.5k
+	LT8900_writeRegister(45,0x0080);		//Option: 0x0152 or 0x0080 for 1M, 0x0552 for 250k,125k and 62.5k
 	#endif
   LT8900_setDataRate(1);
 
@@ -83,7 +83,7 @@ void LT8900_InitRegisters(void) {
 
 void LT8900_startListening(void) {
   LT8900_writeRegister(R_CHANNEL, ActChannel & CHANNEL_MASK);   //turn off rx/tx
-  _delay_ms(3);
+  _delay_ms(1);
   LT8900_writeRegister(R_FIFO_CONTROL, 0x8080);  //flush rx
   LT8900_writeRegister(R_CHANNEL,  (ActChannel & CHANNEL_MASK) | _BV(CHANNEL_RX_BIT));   //enable RX
   //_delay_ms(5);
@@ -134,7 +134,7 @@ int LT8900_read(uint8_t *buffer, uint8_t maxBuffer) {
     packetSize = data >> 8;
     if(maxBuffer < packetSize+1)
     {
-			LT8900_startListening();
+			LT8900_writeRegister(R_FIFO_CONTROL, 0x8080);
       //BUFFER TOO SMALL
         return -2;
     }
@@ -154,6 +154,8 @@ int LT8900_read(uint8_t *buffer, uint8_t maxBuffer) {
   else
   {
     //CRC error
+    data = LT8900_readRegister(R_FIFO);
+    LT8900_writeRegister(R_FIFO_CONTROL, 0x8080);
     return -1;
   }
 }
