@@ -1,3 +1,23 @@
+/*
+Dec 10 2020 V2.1 
+CHANGE
+ - Sequence check on RF commands to filter multiples
+ - Lt8900 reset if corrupted
+ - Shutter working
+ - Broadcast ID at commands
+ - Rx Mode immedeiately after send
+ - Command 10 to set periodic message timer
+ 
+
+ TODO
+ - Turn off when hold
+ - Motion enabled on single press
+ x- check shutter function
+ - Create command spreadsheet
+ - Add Temp calib 
+ - Add light level calib
+
+*/
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
@@ -24,7 +44,7 @@
 #define RF_MILIGHT_GATEW        1
 #define RF_MILIGHT_HOLD_STEP    5
 #define RF_TX_PERIODIC_SEND     1
-#define RF_TX_PERIODIC_TIME     10000
+#define RF_TX_PERIODIC_TIME     30000
 
 #define LIGHTS_BY_MOTION        1
 #define START_LEDON             1
@@ -61,14 +81,14 @@
 #define MAINSTATE_RFRX          4
 #define MAINSTATE_RFTX          8
 
-#define MAINCONFIG_USERF        0
-#define MAINCONFIG_MIREM        1
-#define MAINCONFIG_MIGAT        2
+#define MAINCONFIG_USERF        0       //USE RF FUCTIONS
+#define MAINCONFIG_MIREM        1       //MI REMOTE RECEIVE FUNCTIONS
+#define MAINCONFIG_MIGAT        2       //MI REMOTE GATEWAY FUNCTIONS
 #define MAINCONFIG_MOVL         3
-#define MAINCONFIG_FADEE        4
-#define MAINCONFIG_STRTON       5
-#define MAINCONFIG_FADEDELEN    6
-#define MAINCONFIG_RFPERTXEN    7
+#define MAINCONFIG_FADEE        4       //LIGHT FADING ENABLED
+#define MAINCONFIG_STRTON       5       //START ON WHEN STARTUP
+#define MAINCONFIG_FADEDELEN    6       //FADE DELAY for remote hold
+#define MAINCONFIG_RFPERTXEN    7       //PERIODIC MESSAGES ENABLED
 
 #define RF_TX_MSG_REQ           0
 #define RF_TX_MSG_RES           1
@@ -123,9 +143,9 @@
 #define WS2811_2_PIN						(GPIO_PIN_2)
 #define WS2811_MAX_CHANNELS			20
 
-#define STATUS_1_GPIO_PORT			(GPIOF)
-#define STATUS_1_PIN						(GPIO_PIN_4)
-#define STATUS_2_GPIO_PORT			(GPIOD)
+#define STATUS_1_GPIO_PORT			(GPIOF)                //Blue Status LED
+#define STATUS_1_PIN						(GPIO_PIN_4)        //Blue Status LED
+#define STATUS_2_GPIO_PORT			(GPIOD)					
 #define STATUS_2_PIN						(GPIO_PIN_0)
 #define STATUS_3_GPIO_PORT			(GPIOD)
 #define STATUS_3_PIN						(GPIO_PIN_2)

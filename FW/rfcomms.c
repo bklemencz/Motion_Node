@@ -25,15 +25,16 @@
 
 
 uint8_t RF_NODEID;
-uint8_t RF_RX_Buffer[17];
+uint8_t RF_RX_Buffer[17];     //Buffer to store incomming 2.4G messages
 uint8_t RF_TX_Buffer[17];
 uint8_t RF_TX_Counter;
 uint8_t RF_RX_MI_LastCounter;
-uint16_t RF_RX_MI_ValidAddress;
+uint16_t RF_RX_MI_ValidAddress; 
 uint8_t RF_RX_MI_LearnCounter;
 bool RF_RX_MI_FirstPress;
 uint8_t RF_RX_MI_PrevCommand;
 bool RF_RX_MI_NewRemote;
+uint16_t RF_PeriodicTime;
 bool RF_RX_LED_NightMode[4];
 bool RF_RX_LED_MotionAct[4];
 bool RF_RX_LED_GroupEnabled[4];
@@ -41,6 +42,7 @@ int8_t RF_RX_Lenght;
 int8_t RF_TX_Lenght;
 RF_Datagram_t RF_RX_DataRX,RF_TX_DataTX;
 bool RF_RX_Motion,RF_TX_MotionAlarm_Sent;
+uint8_t RF_Command_LastSeq;
 
 extern volatile uint16_t 	LED_Fade_Timer;
 extern volatile uint16_t  RF_TX_Timer;
@@ -48,6 +50,11 @@ extern volatile uint16_t  RF_TX_Timer;
 extern uint8_t Main_State;
 extern uint16_t Main_Config;
 extern uint8_t Conf_LED_Max_Brightness;
+extern uint16_t Conf_LED_TurnOff_Delay_S;
+extern uint8_t Conf_LED_NightMode_Brightness;
+
+
+
 // Target Brightness levels for groups percentage
 extern uint8_t LED_Target_CW[4];
 extern uint8_t LED_Target_WW[4];
@@ -80,7 +87,7 @@ int8_t RF_RX_Handle()
   if (LT8900_available())
     {
       int8_t packetSize;
-      GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
+      GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN); 
       packetSize = LT8900_read(RF_RX_Buffer, 16);
       if (packetSize > 0)
       {
@@ -89,14 +96,11 @@ int8_t RF_RX_Handle()
         if (bitRead(Main_Config, MAINCONFIG_MIREM)) ValidMI = RF_RX_MIRemote(RF_RX_Buffer,packetSize);
         if (!ValidMI) RF_RX_Command(RF_RX_Buffer,packetSize);
       }
-      /*
-      if (packetSize == -1) 
+      if (packetSize != 0) 
       {
-        LT8900_softReset();
-        LT8900_InitRegisters();        
+          LT8900_startListening();      // LT8900 Clear FIFOS, Rx Enable
       }
-      */
-      LT8900_startListening();      // LT8900 Clear FIFOS, Rx Enable
+      
       // When pressing and holding key on remote first data comes without hold flag, this is a small delay to eliminate this.
       if (bitRead(Main_Config, MAINCONFIG_FADEDELEN) && RF_RX_MI_FirstPress)
 			{
@@ -110,6 +114,7 @@ int8_t RF_RX_Handle()
 
 
 }
+
 void RF_TX_Handle(void)
 {
   uint8_t PacketS;
@@ -119,7 +124,8 @@ void RF_TX_Handle(void)
     PacketS = RF_TX_BuildBuffer(RF_TX_Buffer,&RF_TX_DataTX);
     GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
     LT8900_sendPacket(RF_TX_Buffer, PacketS);
-    RF_TX_Timer = RF_TX_PERIODIC_TIME;
+    LT8900_startListening();
+    RF_TX_Timer = RF_PeriodicTime;
     GPIO_WriteLow(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
   }
   if((RF_TX_MotionIR || RF_TX_MotionRadar) && !RF_TX_MotionAlarm_Sent)
@@ -128,6 +134,7 @@ void RF_TX_Handle(void)
     PacketS = RF_TX_BuildBuffer(RF_TX_Buffer,&RF_TX_DataTX);
     GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
     LT8900_sendPacket(RF_TX_Buffer, PacketS);
+    LT8900_startListening();
     GPIO_WriteLow(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
     RF_TX_MotionAlarm_Sent = TRUE;
     Serial_Send_PWM_MotionDet(255);
@@ -189,7 +196,8 @@ void RF_RX_Check_LT8900(void)
 {
 	if ((LT8900_readRegister(R_CHANNEL)%32) != DEFAULT_CHANNEL)
 	{
-		LT8900_InitRegisters();
+		LT8900_softReset();
+    LT8900_InitRegisters();
 		LT8900_setChannel(DEFAULT_CHANNEL);                                                         // Set recieve channel
 		LT8900_startListening();
 	}
@@ -784,29 +792,90 @@ void RF_RX_Command(uint8_t *RX_Buffer, int8_t Length)
   uint8_t Size;
   uint8_t send485[16],i;
 
-    if (RX_Buffer[0] == RF_NODEID)
+    if ((RX_Buffer[0] == RF_NODEID) || (RX_Buffer[0] == 255))
     {
+        if (RX_Buffer[1] == RF_Command_LastSeq) return;
+        RF_Command_LastSeq = RX_Buffer[1];
         Item =  RX_Buffer[3];
         Size =  RX_Buffer[2]%16;
-        //Config Request
-        if ( Item == 1)
+        switch (Item)
         {
-          Main_Config = RX_Buffer[4]*256 + RX_Buffer[5];
+        case 1:
+          Main_Config = RX_Buffer[4] * 256 + RX_Buffer[5];
           //RFChannel = RX_Buffer[6];
           RF_SetNodeID(RX_Buffer[7]);
           EE_Store_Config();
+          break;
+        
+        case 2:
+          GR_CW_Set(0, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 3:
+          GR_CW_Set(1, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 4:
+          GR_CW_Set(2, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 5:
+          GR_CW_Set(3, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 6:
+          GR_WW_Set(0, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 7:
+          GR_WW_Set(1, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 8:
+          GR_WW_Set(2, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 9:
+          GR_WW_Set(3, RX_Buffer[4] << 24 + RX_Buffer[5] << 16 + RX_Buffer[6] << 8 + RX_Buffer[7]);
+          break;
+        case 10:
+          RF_PeriodicTime = RX_Buffer[4] * 1000;
+          EE_Store_Config();
+          break;
+        case 11:          //set max brightness
+          Conf_LED_Max_Brightness = RX_Buffer[4];
+          EE_Store_Config();
+          Serial_Send_PWM_MaxBright(255,RX_Buffer[4]);
+          break;
+        case 12:
+          Conf_LED_NightMode_Brightness = RX_Buffer[4];
+          EE_Store_Config();
+          Serial_Send_PWM_NightBright(255,RX_Buffer[4]);
+          break;
+        case 13:
+          Conf_LED_TurnOff_Delay_S = RX_Buffer[4] * 10;
+          EE_Store_Config();
+          Serial_Send_PWM_OnTime(255,RX_Buffer[4]);
+          break;
+        case 101:
+          Serial_Send_Shutter_Start(RX_Buffer[4]);
+          break;
+        case 102:
+          Serial_Send_Shutter_GoUp(RX_Buffer[4]);
+          break;
+        case 103:
+          Serial_Send_Shutter_GoDown(RX_Buffer[4]);
+          break;
+        case 104:
+          Serial_Send_Shutter_Position(RX_Buffer[4],RX_Buffer[5]);
+          break;
+        case 250:
+          for (i = 0; i < Size; i++)
+          {
+            send485[i] = RX_Buffer[4 + i];
+          }
+          Serial_Send_Raw(Size, send485, RS485_CHAR_DELAY);
+          break;
+        default:
+          break;
         }
-        if ( Item == 2)
-        {
-          GR_CW_Set(0, RX_Buffer[4]<<24 + RX_Buffer[5]<<16 + RX_Buffer[6]<<8 + RX_Buffer[7]);
-        }
+
         if (Item == 250)   // Send raw data on 485
         {
-          for (i=0;i<Size;i++)
-          {
-            send485[i] = RX_Buffer[4+i];
-          }
-          Serial_Send_Raw(Size,send485,RS485_CHAR_DELAY);
+          
         }
     }
 }

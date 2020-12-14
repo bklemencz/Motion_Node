@@ -64,6 +64,7 @@ uint8_t TxData[8];
 
 extern bool RF_RX_MI_NewRemote;
 extern uint16_t RF_RX_MI_ValidAddress;
+extern uint16_t RF_PeriodicTime;
 extern volatile uint16_t  RF_TX_Timer;
 // Enabled Status for groups
 extern bool RF_RX_LED_GroupEnabled[4];
@@ -197,6 +198,7 @@ void EE_Store_Config (void)
 	if ( RF_RX_MI_ValidAddress !=0 ) EEPROM_Program2Byte(47, RF_RX_MI_ValidAddress);
 	EEPROM_ProgramByte(49, RF_GetNodeID());
 	EEPROM_ProgramByte(50,Shutter_Config);
+	EEPROM_ProgramByte(51,(RF_PeriodicTime/1000));
 
 
 }
@@ -209,7 +211,7 @@ void EE_Read_Config(void)
 	Conf_LED_Max_Brightness = EEPROM_ReadByte(3);
 	Conf_LED_NightMode_Brightness = EEPROM_ReadByte(4);
 	Conf_LED_TurnOff_Delay_S = EEPROM_Read2Byte(5);
-	RF_SetNodeID(EEPROM_ReadByte(49));
+	
 
 	LEDGroup_Def_CW[0] = EEPROM_Read4Byte(7);
   	LEDGroup_Def_CW[1] = EEPROM_Read4Byte(11);
@@ -232,6 +234,7 @@ void EE_Read_Config(void)
 	LED_LastSaved_WW[3] = EEPROM_ReadByte(46);
 
 	RF_RX_MI_ValidAddress = EEPROM_Read2Byte(47);
+	RF_SetNodeID(EEPROM_ReadByte(49));
 
 	Shutter_Config = EEPROM_ReadByte(50);
 	if (bitRead(Shutter_Config,0) != 0)	Shutter_Enabled[0] = TRUE;
@@ -239,6 +242,9 @@ void EE_Read_Config(void)
 	if (bitRead(Shutter_Config,2) != 0)	Shutter_Enabled[2] = TRUE;
 	if (bitRead(Shutter_Config,3) != 0)	Shutter_Enabled[3] = TRUE;
 	
+	RF_PeriodicTime = EEPROM_ReadByte(51) * 1000;
+
+	if (RF_PeriodicTime == 0) RF_PeriodicTime = RF_TX_PERIODIC_TIME;
 	//For Remote Control Command, when holding remote key it sends command without hold first.
 	SetBit(Main_Config, MAINCONFIG_FADEDELEN);
 	SetBit(Main_Config, MAINCONFIG_RFPERTXEN);
@@ -271,7 +277,7 @@ void StartUp(void)
 	LT8900_InitRegisters(); 
 	LT8900_setChannel(DEFAULT_CHANNEL);                            // Set recieve channel
   	LT8900_startListening();												 // RX Mode
-	RF_TX_Timer = RF_TX_PERIODIC_TIME;
+	RF_TX_Timer = RF_PeriodicTime;
 
 }
 
@@ -396,6 +402,7 @@ uint8_t Motion_Parse(void)
 	if(PIR_Motion && (PIR_Conf_Timer==0)) { Out = 1; RF_TX_MotionIR=TRUE; }
 	if(RADAR_Motion && (RADAR_Conf_Timer==0)) { Out = Out+2; RF_TX_MotionRadar = TRUE;}
 	if(RF_RX_Motion)	Out = Out+4;
+	return Out;
 }
 
 /// Check motion enabled status and handle LED on/off delay times.

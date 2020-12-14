@@ -17,7 +17,7 @@
 #define CHANNEL_RX_BIT      7
 #define CHANNEL_TX_BIT      8
 #define CHANNEL_MASK        0x7F  ///bin
-#define DEFAULT_CHANNEL     74          //CW WW              sync: 0x0a0A 0x55AA         channels: 4, 39, 74
+#define DEFAULT_CHANNEL     74          //CW WW   sync: 0x0a0A 0x55AA   channels: 4, 39, 74
 
 #define R_CURRENT           9
 #define CURRENT_POWER_SHIFT 12
