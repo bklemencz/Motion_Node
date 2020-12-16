@@ -121,6 +121,19 @@ void Serial_Send_PWM_OnTime(uint8_t ID, uint8_t Val)
     Serial_Send_Raw(7,SBuffer,RS485_CHAR_DELAY);
 }
 
+void Serial_Send_PWM_FadeTime(uint8_t ID, uint8_t Val)
+{
+    
+    SBuffer[0]=('P');
+    SBuffer[1]=(ID);
+    SBuffer[2]=('S');
+    SBuffer[3]=('R');
+    SBuffer[4]=(Val);
+    SBuffer[5]=('0');
+    SBuffer[6]=('\r');
+    Serial_Send_Raw(7,SBuffer,RS485_CHAR_DELAY);
+}
+
 void Serial_Send_Shutter_Start(uint8_t ID)
 {
     SBuffer[0]=('S');

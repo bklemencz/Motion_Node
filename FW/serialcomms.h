@@ -12,6 +12,7 @@ void Serial_Send_PWM_ChBright(uint8_t ID, uint8_t Ch, uint8_t Val);
 void Serial_Send_PWM_OnTime(uint8_t ID, uint8_t Val);
 void Serial_Send_PWM_NightBright(uint8_t ID, uint8_t Val);          //Set Night mode PWM level
 void Serial_Send_PWM_MaxBright(uint8_t ID, uint8_t Val);
+void Serial_Send_PWM_FadeTime(uint8_t ID, uint8_t Val);
 void Serial_Send_Raw(uint8_t Length, uint8_t *ToSend, uint8_t DelayTime);
 void Serial_Send_Shutter_Start(uint8_t ID);
 void Serial_Send_Shutter_GoUp(uint8_t ID);

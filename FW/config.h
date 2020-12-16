@@ -1,19 +1,22 @@
 /*
-Dec 10 2020 V2.1 
+Dec 10 2020 V2.11 
 CHANGE
  - Sequence check on RF commands to filter multiples
  - Lt8900 reset if corrupted
  - Shutter working
  - Broadcast ID at commands
  - Rx Mode immedeiately after send
+
+Dec 15 2020 V2.12 
  - Command 10 to set periodic message timer
- 
+ - Create command spreadsheet
+ - Multiple message sending
+ - Commands update as in spreadsheet
 
  TODO
+ 
  - Turn off when hold
  - Motion enabled on single press
- x- check shutter function
- - Create command spreadsheet
  - Add Temp calib 
  - Add light level calib
 
@@ -45,6 +48,7 @@ CHANGE
 #define RF_MILIGHT_HOLD_STEP    5
 #define RF_TX_PERIODIC_SEND     1
 #define RF_TX_PERIODIC_TIME     30000
+#define RF_TX_REPEAT            4
 
 #define LIGHTS_BY_MOTION        1
 #define START_LEDON             1

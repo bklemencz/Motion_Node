@@ -52,6 +52,7 @@ extern uint16_t Main_Config;
 extern uint8_t Conf_LED_Max_Brightness;
 extern uint16_t Conf_LED_TurnOff_Delay_S;
 extern uint8_t Conf_LED_NightMode_Brightness;
+extern uint8_t Conf_LED_Fade_Delay;
 
 
 
@@ -118,12 +119,13 @@ int8_t RF_RX_Handle()
 void RF_TX_Handle(void)
 {
   uint8_t PacketS;
+  uint8_t i;
   if (bitRead(Main_Config, MAINCONFIG_RFPERTXEN) && (RF_TX_Timer == 0))       // if periodic messages enabled and timer is up
   {
     RF_TX_BuildPeriodic(&RF_TX_DataTX);
     PacketS = RF_TX_BuildBuffer(RF_TX_Buffer,&RF_TX_DataTX);
     GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
-    LT8900_sendPacket(RF_TX_Buffer, PacketS);
+    for (i=0; i<RF_TX_REPEAT; i++) LT8900_sendPacket(RF_TX_Buffer, PacketS);
     LT8900_startListening();
     RF_TX_Timer = RF_PeriodicTime;
     GPIO_WriteLow(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
@@ -133,7 +135,7 @@ void RF_TX_Handle(void)
     RF_TX_BuildMotionAlarm(&RF_TX_DataTX);
     PacketS = RF_TX_BuildBuffer(RF_TX_Buffer,&RF_TX_DataTX);
     GPIO_WriteHigh(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
-    LT8900_sendPacket(RF_TX_Buffer, PacketS);
+    for (i=0; i<RF_TX_REPEAT; i++) LT8900_sendPacket(RF_TX_Buffer, PacketS);
     LT8900_startListening();
     GPIO_WriteLow(STATUS_1_GPIO_PORT,(GPIO_Pin_TypeDef)STATUS_1_PIN);
     RF_TX_MotionAlarm_Sent = TRUE;
@@ -281,24 +283,25 @@ bool RF_RX_MIRemote(uint8_t *RX_Buffer, int8_t Lenght)
               RF_RX_MI_PrevCommand = Command;
               RF_RX_MI_FirstPress = TRUE;
             } else RF_RX_MI_FirstPress = FALSE;
-            for (i=0;i<4;i++)                     //All Off mm
+            for (i=0;i<4;i++)                     //All motion mode
             {
 
               RF_RX_LED_GroupEnabled[i] = FALSE;
               //RF_RX_LED_NightMode[i] = FALSE;
               RF_RX_LED_MotionAct[i] = FALSE;
             }
-            //Serial_Send_PWM_MotionEN(255,0);
-            Serial_Send_PWM_Onoff(255,0);
-          } else                                  // ALL at motion mode
+            Serial_Send_PWM_MotionEN(255,1);
+            
+          } else                                  // ALL off
           {
             for (i=0;i<4;i++)
             {
               RF_RX_LED_MotionAct[i] = TRUE;
               RF_RX_MI_FirstPress = FALSE;
             }
-            Serial_Send_PWM_MotionEN(255,1);
-          } //all motion
+            Serial_Send_PWM_MotionEN(255,0);
+            Serial_Send_PWM_Onoff(255,0);
+          } //all off
         } // All off command
 
         ////////////////////////////////////////
@@ -849,6 +852,24 @@ void RF_RX_Command(uint8_t *RX_Buffer, int8_t Length)
           Conf_LED_TurnOff_Delay_S = RX_Buffer[4] * 10;
           EE_Store_Config();
           Serial_Send_PWM_OnTime(255,RX_Buffer[4]);
+          break;
+        case 14:          //Fade Time
+          Conf_LED_Fade_Delay = RX_Buffer[4];
+          EE_Store_Config();
+          Serial_Send_PWM_FadeTime(255,RX_Buffer[4]);
+          break;
+        case 15:          //Warm light
+          Serial_Send_PWM_Bright(255,RX_Buffer[4],1);
+          // TODO same to internal enabled channels.
+          break;
+        case 16:          //Cold light
+          Serial_Send_PWM_Bright(255,1,RX_Buffer[4]);
+          break;
+        case 17:          //Neutral light
+          Serial_Send_PWM_Bright(255,RX_Buffer[4],RX_Buffer[4]);
+          break;
+        case 18:          //Individual lamp control by ID
+          Serial_Send_PWM_Bright(RX_Buffer[4],RX_Buffer[5],RX_Buffer[6]);
           break;
         case 101:
           Serial_Send_Shutter_Start(RX_Buffer[4]);
